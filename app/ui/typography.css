@@ -1,0 +1,161 @@
+.heading-1 {
+  font-size: 40px;
+  line-height: 44px;
+}
+
+.heading-2 {
+  font-size: 28px;
+  line-height: 32px;
+}
+
+.heading-3 {
+  font-size: 24px;
+  line-height: 28px;
+}
+
+.heading-4 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+.heading-5 {
+  font-size: 16px;
+  line-height: 20px;
+}
+
+.heading-6 {
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.heading-7 {
+  font-size: 12px;
+  line-height: 16px;
+}
+
+/* Body text */
+.body-1 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+.body-2 {
+  font-size: 18px;
+  line-height: 24px;
+}
+
+.body-3 {
+  font-size: 16px;
+  line-height: 20px;
+}
+
+.body-4 {
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.body-5 {
+  font-size: 12px;
+  line-height: 16px;
+}
+
+/* ===== Screen ≤ 990px ===== */
+@media (max-width: 990px) {
+  .heading-1 {
+    font-size: 34px;
+    line-height: 40px;
+  }
+  .heading-2 {
+    font-size: 24px;
+    line-height: 30px;
+  }
+  .heading-3 {
+    font-size: 20px;
+    line-height: 26px;
+  }
+  .heading-4 {
+    font-size: 18px;
+    line-height: 24px;
+  }
+
+  .body-1 {
+    font-size: 18px;
+    line-height: 22px;
+  }
+  .body-2 {
+    font-size: 16px;
+    line-height: 20px;
+  }
+}
+
+/* ===== Screen ≤ 768px ===== */
+@media (max-width: 768px) {
+  .heading-1 {
+    font-size: 30px;
+    line-height: 36px;
+  }
+  .heading-2 {
+    font-size: 22px;
+    line-height: 28px;
+  }
+  .heading-3 {
+    font-size: 18px;
+    line-height: 24px;
+  }
+  .heading-4 {
+    font-size: 16px;
+    line-height: 22px;
+  }
+
+  .body-1 {
+    font-size: 16px;
+    line-height: 20px;
+  }
+  .body-2 {
+    font-size: 15px;
+    line-height: 20px;
+  }
+  .body-3 {
+    font-size: 14px;
+    line-height: 18px;
+  }
+}
+
+/* ===== Screen ≤ 620px ===== */
+@media (max-width: 620px) {
+  .heading-1 {
+    font-size: 26px;
+    line-height: 32px;
+  }
+  .heading-2 {
+    font-size: 20px;
+    line-height: 26px;
+  }
+  .heading-3 {
+    font-size: 17px;
+    line-height: 22px;
+  }
+  .heading-4 {
+    font-size: 15px;
+    line-height: 20px;
+  }
+  .heading-5 {
+    font-size: 14px;
+    line-height: 18px;
+  }
+
+  .body-1 {
+    font-size: 14px;
+    line-height: 20px;
+  }
+  .body-2 {
+    font-size: 13px;
+    line-height: 18px;
+  }
+  .body-3,
+  .body-4,
+  .body-5 {
+    font-size: 12px;
+    line-height: 16px;
+  }
+}

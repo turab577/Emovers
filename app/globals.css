@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+body {
+  background-color: white;
+}
+
+/* Hide scrollbar globally reusable utility */
+.hide-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
+.react-tabs__tab--selected{
+  border: 1px solid #E2E3E5;
+  border-radius: 8px !important;
+}
+.react-tabs__tab{
+  border: none !important;
+}
+.custom-shadow {
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.08);
+}
+.react-datepicker-wrapper{
+  position: absolute !important;
+}
