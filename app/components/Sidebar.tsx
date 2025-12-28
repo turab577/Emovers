@@ -90,6 +90,31 @@ const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Navigation (single container) */}
         <nav className="flex flex-col space-y-1 pt-6">
+          <NavLink href="/user-management" minimized={minimized}>
+             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M13.3327 17.5V15.8333C13.3327 14.9493 12.9815 14.1014 12.3564 13.4763C11.7313 12.8512 10.8834 12.5 9.99935 12.5H4.99935C4.11529 12.5 3.26745 12.8512 2.64233 13.4763C2.01721 14.1014 1.66602 14.9493 1.66602 15.8333V17.5M18.3327 17.4999V15.8332C18.3321 15.0947 18.0863 14.3772 17.6338 13.7935C17.1813 13.2098 16.5478 12.7929 15.8327 12.6082M13.3327 2.60824C14.0497 2.79182 14.6852 3.20882 15.139 3.79349C15.5929 4.37817 15.8392 5.09726 15.8392 5.8374C15.8392 6.57754 15.5929 7.29664 15.139 7.88131C14.6852 8.46598 14.0497 8.88298 13.3327 9.06657M10.8327 5.83333C10.8327 7.67428 9.3403 9.16667 7.49935 9.16667C5.6584 9.16667 4.16602 7.67428 4.16602 5.83333C4.16602 3.99238 5.6584 2.5 7.49935 2.5C9.3403 2.5 10.8327 3.99238 10.8327 5.83333Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+            <span className={minimized ? "hidden" : ""}>
+              User Management
+            </span>
+          </NavLink>
+          <NavLink href="/locations" minimized={minimized}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+            <span className={minimized ? "hidden" : ""}>Locations</span>
+          </NavLink>
           <NavLink href="/posters" minimized={minimized}>
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -109,32 +134,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             <span className={minimized ? "hidden" : ""}>Posters</span>
           </NavLink>
 
-          <NavLink href="/locations" minimized={minimized}>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" />
-              <circle cx="12" cy="10" r="3" />
-            </svg>
-            <span className={minimized ? "hidden" : ""}>Locations</span>
-          </NavLink>
 
-          <NavLink href="/user-management" minimized={minimized}>
-             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M13.3327 17.5V15.8333C13.3327 14.9493 12.9815 14.1014 12.3564 13.4763C11.7313 12.8512 10.8834 12.5 9.99935 12.5H4.99935C4.11529 12.5 3.26745 12.8512 2.64233 13.4763C2.01721 14.1014 1.66602 14.9493 1.66602 15.8333V17.5M18.3327 17.4999V15.8332C18.3321 15.0947 18.0863 14.3772 17.6338 13.7935C17.1813 13.2098 16.5478 12.7929 15.8327 12.6082M13.3327 2.60824C14.0497 2.79182 14.6852 3.20882 15.139 3.79349C15.5929 4.37817 15.8392 5.09726 15.8392 5.8374C15.8392 6.57754 15.5929 7.29664 15.139 7.88131C14.6852 8.46598 14.0497 8.88298 13.3327 9.06657M10.8327 5.83333C10.8327 7.67428 9.3403 9.16667 7.49935 9.16667C5.6584 9.16667 4.16602 7.67428 4.16602 5.83333C4.16602 3.99238 5.6584 2.5 7.49935 2.5C9.3403 2.5 10.8327 3.99238 10.8327 5.83333Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-            <span className={minimized ? "hidden" : ""}>
-              User Management
-            </span>
-          </NavLink>
 
           <NavLink href="/services" minimized={minimized}>
             <svg

@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import PrimaryBtn from '../ui/buttons/PrimaryBtn';
 
 export default function Posters() {
   // Initial state with sample images
@@ -41,14 +42,16 @@ export default function Posters() {
 
   return (
     <div>
+      <div className='flex justify-between items-center'>
       <div className='space-y-2 mb-8'>
         <h2 className='heading-2 text-[#111827] font-medium'>Posters</h2>
         <p className='heading-5 text-[#70747D] font-normal'>See and customize your posters</p>
       </div>
-
-      {/* Upload Button */}
-      <div className="mb-6">
-        <button
+      <div>
+       <PrimaryBtn
+       label=' Upload New Posters'
+       imageSrc='/images/arrow-right.svg'
+       imagePosition='right'
           onClick={() => {
             const input = document.createElement('input');
             input.type = 'file';
@@ -74,14 +77,12 @@ export default function Posters() {
             
             input.click();
           }}
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
-          </svg>
-          Upload New Posters
-        </button>
+        />
+        </div>
       </div>
+
+      {/* Upload Button */}
+    
 
       {/* Responsive image grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
