@@ -13,7 +13,7 @@ const handleOpenLocation = ()=>{
 
   return (
     <div>
-      <div className='flex items-center justify-between'>
+      <div className='flex flex-col sm:flex-row mb-3 sm:mb-0 items-center justify-between'>
       <div className='space-y-2 mb-5'>
           <h2 className='heading-2 text-[#111827] font-medium'>Locations</h2>
           <p className='heading-5 text-[#70747D] font-normal'>Give your location and see the clients approaching you</p>

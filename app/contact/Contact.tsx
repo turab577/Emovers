@@ -148,7 +148,7 @@ export default function Contact() {
             <div key={contact.id} className="flex items-center gap-4">
               <span className="text-xl">{getContactIcon(contact.type)}</span>
               {isEditingContact ? (
-                <div className="flex-1 flex gap-2">
+                <div className="flex-1 flex-col sm:flex-row flex gap-2">
                   <input
                     type="text"
                     value={contact.value}
@@ -213,7 +213,7 @@ export default function Contact() {
             <div key={location.id} className="flex items-center gap-4">
               <span className="text-xl">📍</span>
               {isEditingLocations ? (
-                <div className="flex-1 flex gap-2">
+                <div className="flex-1 flex-col sm:flex-row flex gap-2">
                   <input
                     type="text"
                     value={location.value}
@@ -278,7 +278,7 @@ export default function Contact() {
             <div key={social.id} className="flex items-center gap-4">
               <span className="text-xl">{getSocialIcon(social.type)}</span>
               {isEditingSocials ? (
-                <div className="flex-1 flex gap-2">
+                <div className="flex-1 flex-col sm:flex-row flex gap-2">
                   <input
                     type="text"
                     value={social.value}

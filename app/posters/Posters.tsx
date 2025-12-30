@@ -42,7 +42,7 @@ export default function Posters() {
 
   return (
     <div>
-      <div className='flex justify-between items-center'>
+      <div className='flex flex-col sm:flex-row mb-3 sm:mb-0 justify-between items  -center'>
       <div className='space-y-2 mb-8'>
         <h2 className='heading-2 text-[#111827] font-medium'>Posters</h2>
         <p className='heading-5 text-[#70747D] font-normal'>See and customize your posters</p>
