@@ -1,11 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import PrimaryBtn from "@/app/ui/buttons/PrimaryBtn";
 import Input from "@/app/ui/Input";
 import ConfirmationModal from "@/app/shared/ConfirmationModal";
 import toast from "react-hot-toast";
+import { profileAPI } from "../api/profile";
+import Cookies from "js-cookie";
+import { useRouter } from "next/navigation";
 
 interface User {
   firstName: string;
@@ -19,22 +22,84 @@ const Profile: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   
   const [user, setUser] = useState<User>({
-    firstName: "John",
-    lastName: "Doe",
-    email: "john.doe@example.com",
-    profilePic: "/images/Avatar.svg"
+    firstName: "",
+    lastName: "",
+    email: "",
+    profilePic: "/images/profile.svg"
   });
   
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isUpdatingImage, setIsUpdatingImage] = useState<boolean>(false);
-  const [name, setName] = useState<string>("John Doe");
-  const [email, setEmail] = useState<string>("john.doe@example.com");
+  const [name, setName] = useState<string>("");
+  const [email, setEmail] = useState<string>("");
   
-  const [tempName, setTempName] = useState<string>("John Doe");
-  const [tempEmail, setTempEmail] = useState<string>("john.doe@example.com");
+  const [tempFirstName, setTempFirstName] = useState<string>("");
+  const [tempLastName, setTempLastName] = useState<string>("");
+  const [tempEmail, setTempEmail] = useState<string>("");
   
   const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState<boolean>(false);
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState<boolean>(false);
+
+  // Fetch user profile on component mount
+  useEffect(() => {
+    fetchUserProfile();
+  }, []);
+
+  const fetchUserProfile = async (): Promise<void> => {
+    try {
+      setIsLoading(true);
+      const response = await profileAPI.getProfile();
+
+      console.log('API Response:', response);
+      
+      // Check if response exists and has the expected structure
+      if (response?.success && response?.data) {
+        const userData = response.data;
+        const fullName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim();
+        
+        setUser({
+          firstName: userData.firstName || "",
+          lastName: userData.lastName || "",
+          email: userData.email || "",
+          profilePic: userData.profilePicture || "/images/profile.svg"
+        });
+        
+        setName(fullName);
+        setEmail(userData.email || "");
+        setTempFirstName(userData.firstName || "");
+        setTempLastName(userData.lastName || "");
+        setTempEmail(userData.email || "");
+        
+        if (userData.profilePicture) {
+          setProfileImg(userData.profilePicture);
+        }
+        
+        // toast.success(response.message || "Profile loaded successfully");
+      } else {
+        throw new Error(response?.message || "Failed to fetch profile");
+      }
+    } catch (error: any) {
+      console.error("Failed to fetch profile:", error);
+      
+      // Handle different error structures
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else if (error.response?.data?.error?.message) {
+        toast.error(error.response.data.error.message);
+      } else if (error.message?.includes("Unexpected token '<'")) {
+        // Handle JSON parsing error (HTML response)
+        toast.error("Server error. Please try again later.");
+      } else if (error.message) {
+        toast.error(error.message);
+      } else {
+        toast.error("Failed to load profile data");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleChangeImage = (): void => {
     fileInputRef.current?.click();
@@ -61,23 +126,54 @@ const Profile: React.FC = () => {
     try {
       setIsUpdatingImage(true);
 
-      // Create a preview URL for the selected image
+      // Create a preview URL for immediate feedback
       const imageUrl = URL.createObjectURL(file);
-      
-      // Update user state with new image
-      const updatedUser = {
-        ...user,
-        profilePic: imageUrl
-      };
-      
-      setUser(updatedUser);
       setProfileImg(imageUrl);
-      
-      toast.success("Profile picture updated successfully!");
+
+      // Create form data for file upload
+      const formData = new FormData();
+      formData.append("file", file);
+
+      // Call API to upload image
+      const response = await profileAPI.updateProfileImage(formData as any);
+      const apiResponse = response.data;
+            
+      if (response.status == 'success' as any) {
+        // Update user state with new image
+        const updatedUser = {
+          ...user,
+          profilePic: imageUrl
+        };
+        
+        setUser(updatedUser);
+        
+        toast.success(response.message || "Profile picture updated successfully!");
+        window.location.reload();
+
+      } else {
+        // Revert preview if API fails
+        setProfileImg(user.profilePic);
+        throw new Error(apiResponse?.message || "Failed to update profile picture");
+      }
       
     } catch (error: any) {
       console.error("Failed to update profile picture:", error);
-      toast.error("Failed to update profile picture. Please try again.");
+      
+      // Revert preview on error
+      setProfileImg(user.profilePic);
+      
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else if (error.response?.data?.error?.message) {
+        toast.error(error.response.data.error.message);
+      } else if (error.message?.includes("Unexpected token '<'")) {
+        // Handle JSON parsing error (HTML response)
+        toast.error("Server error. Please try again later.");
+      } else if (error.message) {
+        toast.error(error.message);
+      } else {
+        toast.error("Failed to update profile picture. Please try again.");
+      }
     } finally {
       setIsUpdatingImage(false);
       // Reset file input
@@ -88,63 +184,152 @@ const Profile: React.FC = () => {
   };
 
   const startEditing = (): void => {
-    setTempName(name);
+    setTempFirstName(user.firstName);
+    setTempLastName(user.lastName);
     setTempEmail(email);
     setIsEditing(true);
   };
 
   const cancelEditing = (): void => {
-    setTempName(name);
+    setTempFirstName(user.firstName);
+    setTempLastName(user.lastName);
     setTempEmail(email);
     setIsEditing(false);
   };
 
+  // Function to split full name into firstName and lastName
+  const splitFullName = (fullName: string): { firstName: string; lastName: string } => {
+    const nameParts = fullName.trim().split(/\s+/);
+    
+    if (nameParts.length === 0) {
+      return { firstName: "", lastName: "" };
+    }
+    
+    if (nameParts.length === 1) {
+      return { firstName: nameParts[0], lastName: "" };
+    }
+    
+    // First part as firstName, all other parts combined as lastName
+    const firstName = nameParts[0];
+    const lastName = nameParts.slice(1).join(" ");
+    
+    return { firstName, lastName };
+  };
+
   const saveChanges = async (): Promise<void> => {
+  try {
+    // Validate firstName
+    if (!tempFirstName.trim()) {
+      toast.error("First name is required");
+      return;
+    }
+
+    // Validate email
+    if (!tempEmail.trim()) {
+      toast.error("Email is required");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(tempEmail)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
+    setIsUpdatingProfile(true);
+
+    // Prepare payload for API
+    const payload = {
+      firstName: tempFirstName.trim(),
+      lastName: tempLastName.trim(),
+      email: tempEmail.trim()
+    };
+
+    // Try to call API with error handling
+    let response;
     try {
-      if (!tempName.trim()) {
-        toast.error("Name is required");
-        return;
+      response = await profileAPI.updateProfileApiResponse(payload);
+      console.log('Update Profile Response:', response);
+    } catch (apiError: any) {
+      console.log('API call threw error:', apiError);
+      
+      // Check if the error response actually contains success data
+      if (apiError?.response?.status === "success" || apiError?.response?.success) {
+        // The API call succeeded but threw an error anyway
+        response = apiError.response;
+      } else {
+        // Re-throw if it's a real error
+        throw apiError;
       }
-
-      if (!tempEmail.trim()) {
-        toast.error("Email is required");
-        return;
-      }
-
-      const names = tempName.trim().split(" ");
-      const firstName = names[0] || "";
-      const lastName = names.slice(1).join(" ") || "";
-
+    }
+    
+    // If we have a response with success status
+    if (response?.status === "success" || response?.success) {
       // Update user state
       const updatedUser = {
-        ...user,
-        firstName,
-        lastName,
-        email: tempEmail
+        firstName: response.data?.firstName || payload.firstName,
+        lastName: response.data?.lastName || payload.lastName,
+        email: response.data?.email || payload.email,
+        profilePic: response.data?.profilePicture || user.profilePic
       };
 
       setUser(updatedUser);
-
-      const fullName = `${firstName} ${lastName}`.trim();
-      setName(fullName);
-      setEmail(tempEmail);
-
+      setName(`${updatedUser.firstName} ${updatedUser.lastName}`.trim());
+      setEmail(updatedUser.email);
       setIsEditing(false);
-      toast.success("Profile updated successfully!");
-    } catch (error) {
-      console.error("Failed to update profile:", error);
-      toast.error("Failed to update profile");
+      
+      toast.success(response.message || "Profile updated successfully!");
+      setIsEditing(false)
+      return;
     }
-  };
+    
+    // If we get here, something went wrong
+    throw new Error(response?.message || "Failed to update profile");
+    
+  } catch (error: any) {
+    console.error("Failed to update profile:", error);
+    
+    // Show error toast
+    if (error.message) {
+      toast.error(error.message);
+    } else {
+      toast.error("Failed to update profile. Please try again.");
+    }
+  } finally {
+    setIsUpdatingProfile(false);
+  }
+};
+
+  const router = useRouter()
 
   const confirmLogout = (): void => {
     // Simulate logout
-    toast.success("Logged out successfully!");
     setIsLogoutModalOpen(false);
-    
+    Cookies.remove('accessToken')
     // Redirect to login page (simulated)
-    console.log("Redirecting to login page...");
+    router.push('/')
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-5">
+        <div className="space-y-2">
+          <h1 className="heading-4 text-[#111827] font-medium">Profile</h1>
+          <p className="body-3 text-[#70747D] font-normal">
+            Customize your profile and make it truly yours.
+          </p>
+        </div>
+        <div className="bg-[#F6F6F6] p-3 rounded-xl space-y-3">
+          <div className="bg-white rounded-xl p-3 flex items-center justify-center">
+            <div className="text-center py-10">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#F87B1B]"></div>
+              <p className="mt-2 text-[#70747D]">Loading profile...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -159,14 +344,26 @@ const Profile: React.FC = () => {
         <div className="bg-white rounded-xl p-3 flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
           <div className="flex items-center gap-5">
             <div className="w-20 h-20 relative rounded-full overflow-hidden shrink-0">
-              <Image
-                src={profileImg}
-                alt="Avatar"
-                fill
-                className="object-cover"
-                priority
-                sizes="80px"
-              />
+              {/* Use regular img tag for external URLs or configure next.config.js */}
+              {profileImg.startsWith('http') ? (
+                <img
+                  src={profileImg}
+                  alt="Avatar"
+                  className="w-full h-full object-cover rounded-full"
+                  onError={(e) => {
+                    e.currentTarget.src = "/images/profile.svg";
+                  }}
+                />
+              ) : (
+                <Image
+                  src={profileImg}
+                  alt="Avatar"
+                  fill
+                  className="object-cover"
+                  priority
+                  sizes="80px"
+                />
+              )}
               {isUpdatingImage && (
                 <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
                   <div className="text-white text-sm">Uploading...</div>
@@ -175,15 +372,13 @@ const Profile: React.FC = () => {
             </div>
 
             <div className="space-y-1">
-              <h1 className="heading-3 text-[#000000CC]">{name}</h1>
-              <p className="text-[#00000066] body-2">{email}</p>
+              <h1 className="heading-3 text-[#000000CC]">{name || "User Name"}</h1>
+              <p className="text-[#00000066] body-2">{email || "user@example.com"}</p>
             </div>
           </div>
 
           <div className="flex items-end justify-end">
             <PrimaryBtn
-              // fontSize="12px"
-              
               variant="soft"
               label={isUpdatingImage ? "Uploading..." : "Change photo"}
               width="fit-content"
@@ -226,15 +421,27 @@ const Profile: React.FC = () => {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-between w-full gap-8">
+            {/* First Name Input */}
             <Input
-              title="Name"
-              placeholder="Enter your name"
+              title="First Name"
+              placeholder="Enter your first name"
               className="w-full"
-              value={tempName}
+              value={tempFirstName}
               disabled={!isEditing}
-              onChange={(e) => setTempName(e.target.value)}
+              onChange={(e) => setTempFirstName(e.target.value)}
             />
 
+            {/* Last Name Input */}
+            <Input
+              title="Last Name"
+              placeholder="Enter your last name (optional)"
+              className="w-full"
+              value={tempLastName}
+              disabled={!isEditing}
+              onChange={(e) => setTempLastName(e.target.value)}
+            />
+
+            {/* Email Input */}
             <Input
               title="Email"
               placeholder="Enter your email"
@@ -286,7 +493,6 @@ const Profile: React.FC = () => {
         {isEditing && (
           <div className="flex flex-col sm:flex-row items-end justify-end gap-3">
             <PrimaryBtn
-              // fontSize="12px"
               variant="soft"
               label="Go back"
               width="fit-content"
@@ -294,17 +500,18 @@ const Profile: React.FC = () => {
               imagePosition="left"
               onClick={cancelEditing}
               type="button"
+              disabled={isUpdatingProfile}
             />
 
             <PrimaryBtn
-              // fontSize="12px"
               variant="filled"
-              label="Save changes"
+              label={isUpdatingProfile ? "Saving..." : "Save changes"}
               width="fit-content"
               imageSrc="/images/filled-arrow.svg"
               imagePosition="right"
               onClick={saveChanges}
               type="button"
+              disabled={isUpdatingProfile}
             />
           </div>
         )}
@@ -316,7 +523,6 @@ const Profile: React.FC = () => {
         onConfirm={confirmLogout}
         title="Are you sure you want to logout?"
         message="You'll be signed out of your account and need to log in again to continue."
-        icon="/images/logout.svg"
         confirmText="Logout"
         cancelText="Go back"
       />

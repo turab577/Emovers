@@ -4,8 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-// import Checkbox from "@/app/ui/Checkbox";
 import ActionDropdown from "@/app/shared/ActionDropdown";
+import { profileAPI } from "@/app/api/profile"; // Import your profile API
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -22,6 +22,15 @@ interface Notification {
   createdAt?: string;
 }
 
+// Add User interface matching your API response
+interface User {
+  firstName: string;
+  lastName: string;
+  email: string;
+  profilePicture: string;
+  role?: string;
+}
+
 const Header: React.FC<HeaderProps> = ({ onMenuClick, isMobile }) => {
   const pathname = usePathname();
 
@@ -30,10 +39,13 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isMobile }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
   const [subscription, setSubscription] = useState<any>(null);
-  const [trialDaysLeft, setTrialDaysLeft] = useState<number | null>(15); // Mock: 15 days left
+  const [trialDaysLeft, setTrialDaysLeft] = useState<number | null>(15);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
+  // Profile states
+  const [user, setUser] = useState<User | null>(null);
   const [profileImg, setProfileImg] = useState<string>("/images/profile.svg");
+  const [isLoadingProfile, setIsLoadingProfile] = useState<boolean>(true);
 
   // Mock data for notifications
   const mockNotifications: Notification[] = [
@@ -49,35 +61,35 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isMobile }) => {
       title: "New Lead Added",
       description: "John Doe has been added to your leads list",
       unread: true,
-      createdAt: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
+      createdAt: new Date(Date.now() - 3600000).toISOString(),
     },
     {
       id: "3",
       title: "Campaign Completed",
       description: "Your email campaign has been sent successfully",
       unread: false,
-      createdAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+      createdAt: new Date(Date.now() - 86400000).toISOString(),
     },
     {
       id: "4",
       title: "Meeting Scheduled",
       description: "Meeting with Sarah Johnson at 2:00 PM tomorrow",
       unread: true,
-      createdAt: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
+      createdAt: new Date(Date.now() - 172800000).toISOString(),
     },
     {
       id: "5",
       title: "Subscription Update",
       description: "Your trial period has been extended",
       unread: false,
-      createdAt: new Date(Date.now() - 259200000).toISOString(), // 3 days ago
+      createdAt: new Date(Date.now() - 259200000).toISOString(),
     },
   ];
 
   // Mock subscription data
   const mockSubscription = {
     status: "trialing",
-    trialEnd: new Date(Date.now() + 15 * 86400000).toISOString(), // 15 days from now
+    trialEnd: new Date(Date.now() + 15 * 86400000).toISOString(),
   };
 
   // Fetch data when dropdown opens
@@ -86,15 +98,65 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isMobile }) => {
       fetchNotifications();
     }
     fetchSubscriptionData();
-    fetchUserProfile();
   }, [isNotificationOpen]);
+
+  // Fetch user profile on component mount
+  useEffect(() => {
+    fetchUserProfile();
+  }, []);
 
   const fetchUserProfile = async (): Promise<void> => {
     try {
-      // Mock: Set profile image
+      setIsLoadingProfile(true);
+      const response = await profileAPI.getProfile();
+
+      console.log('Header Profile API Response:', response);
+      
+      // Check if response exists and has the expected structure
+      if (response?.success && response?.data) {
+        const userData = response.data;
+        
+        setUser({
+          firstName: userData.firstName || "",
+          lastName: userData.lastName || "",
+          email: userData.email || "",
+          profilePicture: userData.profilePicture || "/images/profile.svg",
+          role: userData.role || ""
+        });
+        
+        if (userData.profilePicture) {
+          setProfileImg(userData.profilePicture);
+        } else {
+          setProfileImg("/images/profile.svg");
+        }
+      } else if (response?.status === "success" && response?.data) {
+        // Handle alternative success structure
+        const userData = response.data;
+        
+        setUser({
+          firstName: userData.firstName || "",
+          lastName: userData.lastName || "",
+          email: userData.email || "",
+          profilePicture: userData.profilePicture || "/images/profile.svg",
+          role: userData.role || ""
+        });
+        
+        if (userData.profilePicture) {
+          setProfileImg(userData.profilePicture);
+        } else {
+          setProfileImg("/images/profile.svg");
+        }
+      } else {
+        throw new Error(response?.message || "Failed to fetch profile");
+      }
+    } catch (error: any) {
+      console.error("Failed to fetch profile in Header:", error);
+      
+      // Don't show toast in header to avoid disrupting UX
+      // Use fallback image
       setProfileImg("/images/profile.svg");
-    } catch (error) {
-      console.error("Failed to fetch user profile:", error);
+    } finally {
+      setIsLoadingProfile(false);
     }
   };
 
@@ -106,7 +168,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isMobile }) => {
       setTimeout(() => {
         setNotifications(mockNotifications);
         setLoading(false);
-      }, 300); // Simulate network delay
+      }, 300);
       
     } catch (error: any) {
       console.error("Error fetching notifications:", error);
@@ -191,7 +253,6 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isMobile }) => {
       <li>
         <button 
           onClick={() => {
-            // Mock: Remove notification
             setNotifications(prev => prev.filter(n => n.id !== notification.id));
           }}
           className="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-500"
@@ -203,85 +264,88 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isMobile }) => {
   );
 
   const segments = pathname.split("/").filter(Boolean);
-  const baseModule = segments[0] || "Services" ;
+  const baseModule = segments[0] || "Services";
 
   const routeIcons: { [key: string]: React.ReactNode } = {
     Services: (
       <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <rect width="20" height="8" x="2" y="2" rx="2" ry="2" />
-              <rect width="20" height="8" x="2" y="14" rx="2" ry="2" />
-              <line x1="6" x2="6.01" y1="6" y2="6" />
-              <line x1="6" x2="6.01" y1="18" y2="18" />
-            </svg>
+        xmlns="http://www.w3.org/2000/svg"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <rect width="20" height="8" x="2" y="2" rx="2" ry="2" />
+        <rect width="20" height="8" x="2" y="14" rx="2" ry="2" />
+        <line x1="6" x2="6.01" y1="6" y2="6" />
+        <line x1="6" x2="6.01" y1="18" y2="18" />
+      </svg>
     ),
     "user-management": (
-       <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M13.3327 17.5V15.8333C13.3327 14.9493 12.9815 14.1014 12.3564 13.4763C11.7313 12.8512 10.8834 12.5 9.99935 12.5H4.99935C4.11529 12.5 3.26745 12.8512 2.64233 13.4763C2.01721 14.1014 1.66602 14.9493 1.66602 15.8333V17.5M18.3327 17.4999V15.8332C18.3321 15.0947 18.0863 14.3772 17.6338 13.7935C17.1813 13.2098 16.5478 12.7929 15.8327 12.6082M13.3327 2.60824C14.0497 2.79182 14.6852 3.20882 15.139 3.79349C15.5929 4.37817 15.8392 5.09726 15.8392 5.8374C15.8392 6.57754 15.5929 7.29664 15.139 7.88131C14.6852 8.46598 14.0497 8.88298 13.3327 9.06657M10.8327 5.83333C10.8327 7.67428 9.3403 9.16667 7.49935 9.16667C5.6584 9.16667 4.16602 7.67428 4.16602 5.83333C4.16602 3.99238 5.6584 2.5 7.49935 2.5C9.3403 2.5 10.8327 3.99238 10.8327 5.83333Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M13.3327 17.5V15.8333C13.3327 14.9493 12.9815 14.1014 12.3564 13.4763C11.7313 12.8512 10.8834 12.5 9.99935 12.5H4.99935C4.11529 12.5 3.26745 12.8512 2.64233 13.4763C2.01721 14.1014 1.66602 14.9493 1.66602 15.8333V17.5M18.3327 17.4999V15.8332C18.3321 15.0947 18.0863 14.3772 17.6338 13.7935C17.1813 13.2098 16.5478 12.7929 15.8327 12.6082M13.3327 2.60824C14.0497 2.79182 14.6852 3.20882 15.139 3.79349C15.5929 4.37817 15.8392 5.09726 15.8392 5.8374C15.8392 6.57754 15.5929 7.29664 15.139 7.88131C14.6852 8.46598 14.0497 8.88298 13.3327 9.06657M10.8327 5.83333C10.8327 7.67428 9.3403 9.16667 7.49935 9.16667C5.6584 9.16667 4.16602 7.67428 4.16602 5.83333C4.16602 3.99238 5.6584 2.5 7.49935 2.5C9.3403 2.5 10.8327 3.99238 10.8327 5.83333Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
     ),
     locations: (
-     <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" />
-              <circle cx="12" cy="10" r="3" />
-            </svg>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" />
+        <circle cx="12" cy="10" r="3" />
+      </svg>
     ),
     posters: (
-       <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" />
-              <path d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14" />
-              <path d="M8 6v8" />
-            </svg>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" />
+        <path d="M6 14a12 12 0 0 0 2.4 7.2a2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14" />
+        <path d="M8 6v8" />
+      </svg>
     ),
     services: (
-<svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <rect width="20" height="8" x="2" y="2" rx="2" ry="2" />
-              <rect width="20" height="8" x="2" y="14" rx="2" ry="2" />
-              <line x1="6" x2="6.01" y1="6" y2="6" />
-              <line x1="6" x2="6.01" y1="18" y2="18" />
-            </svg>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <rect width="20" height="8" x="2" y="2" rx="2" ry="2" />
+        <rect width="20" height="8" x="2" y="14" rx="2" ry="2" />
+        <line x1="6" x2="6.01" y1="6" y2="6" />
+        <line x1="6" x2="6.01" y1="18" y2="18" />
+      </svg>
     ),
     contact: (
-     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-user-icon lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-user-icon lucide-user">
+        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
     ),
     meetings: (
       <svg
@@ -483,7 +547,6 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isMobile }) => {
         </div>
 
         <div className="flex items-center gap-3">
-         
           <button
             onClick={() => setIsNotificationOpen(!isNotificationOpen)}
             className={`p-1 rounded-lg transition cursor-pointer`}
@@ -496,13 +559,36 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isMobile }) => {
             />
           </button>
           <Link href="/profile">
-            <Image
-              src={profileImg || "/images/profile.svg"}
-              className="rounded-full w-10 h-10 object-cover"
-              alt="profile"
-              width={40}
-              height={40}
-            />
+            {isLoadingProfile ? (
+              <div className="w-10 h-10 rounded-full bg-gray-200 animate-pulse flex items-center justify-center">
+                <svg
+                  className="w-5 h-5 text-gray-400"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                </svg>
+              </div>
+            ) : profileImg.startsWith('http') ? (
+              <img
+                src={profileImg}
+                className="rounded-full w-10 h-10 object-cover"
+                alt="profile"
+                width={40}
+                height={40}
+                onError={(e) => {
+                  e.currentTarget.src = "/images/profile.svg";
+                }}
+              />
+            ) : (
+              <Image
+                src={profileImg}
+                className="rounded-full w-10 h-10 object-cover"
+                alt="profile"
+                width={40}
+                height={40}
+              />
+            )}
           </Link>
         </div>
 
@@ -527,17 +613,6 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isMobile }) => {
                     >
                       View All
                     </Link>
-                    {/* <button
-                      className="cursor-pointer"
-                      onClick={() => setIsNotificationOpen(false)}
-                    >
-                      <Image
-                        src="/images/cross-notification.svg"
-                        width={32}
-                        height={32}
-                        alt="cross-notification"
-                      />
-                    </button> */}
                   </div>
                 </div>
                 <div className="space-y-3">
@@ -573,7 +648,11 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isMobile }) => {
                       ))}
                     </ul>
                     <div className="flex items-center gap-2">
-                      <input type="checkbox" checked={handleMarkAllAsRead as any} />
+                      <input 
+                        type="checkbox" 
+                        checked={notifications.every(n => !n.unread)}
+                        onChange={handleMarkAllAsRead}
+                      />
                       <p className="text-[#00000066] body-4 font-medium">
                         Mark all as read
                       </p>

@@ -42,6 +42,7 @@ export interface LoginRequest {
 
 export interface LoginSuccessResponse {
   message: string;
+  success : boolean
   user: {
     id: string;
     tenantId: string;

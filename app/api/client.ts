@@ -28,7 +28,7 @@ export interface RequestOptions {
 }
 
 let apiConfig: ApiConfig = {
-  baseURL: process.env.NEXT_PUBLIC_BASE_URL || "https://backend.appointme.vordx.com/api/v1",
+  baseURL: process.env.NEXT_PUBLIC_BASE_URL || "https://ehousemovers.app",
   timeout: 20000,
   getToken: () => tokenService.getAccessToken() ?? null,
 };
@@ -72,15 +72,29 @@ async function apiRequest<T>(
     if (response.status === 401) {
       console.warn('Received 401 Unauthorized');
 
+      // CRITICAL FIX: For login endpoint, throw the error immediately
+      if (endpoint.includes('/auth/login')) {
+        const errorResponse = {
+          success: false,
+          message: responseData.message || 'Authentication failed',
+          status: response.status,
+          error: responseData.error || 'Unauthorized',
+          statusCode: responseData.statusCode || response.status,
+        };
+        console.log('Throwing login error:', errorResponse);
+        throw errorResponse;
+      }
+
       // For billing endpoints, don't auto-redirect - let the component handle it
       if (endpoint.includes('/billing/')) {
-        return {
+        const errorResponse = {
           success: false,
           message: responseData.message || 'Authentication required',
           status: response.status,
           error: responseData.error || 'Unauthorized',
           data: undefined,
         };
+        throw errorResponse;
       }
 
       // Try to refresh token before giving up
@@ -138,13 +152,28 @@ async function apiRequest<T>(
         window.location.href = '/login';
       }
 
-      return {
+      const errorResponse = {
         success: false,
         message: responseData.message || 'Authentication required',
         status: response.status,
         error: responseData.error || 'Unauthorized',
         data: undefined,
       };
+      throw errorResponse;
+    }
+
+    // CRITICAL FIX: Handle other error status codes (400, 403, 404, 500, etc.)
+    if (!response.ok) {
+      const errorResponse = {
+        success: false,
+        message: responseData.message || `Request failed with status ${response.status}`,
+        status: response.status,
+        error: responseData.error || 'Request failed',
+        statusCode: responseData.statusCode || response.status,
+        data: responseData.data,
+      };
+      console.log('Throwing error for status:', response.status, errorResponse);
+      throw errorResponse;
     }
 
     // Check if response already has standard wrapper (success, message, data fields)
@@ -172,11 +201,18 @@ async function apiRequest<T>(
       ...responseData, // Include all other fields from backend response
     };
   } catch (error: any) {
-    return {
+    // If error already has our structure, re-throw it
+    if (error?.statusCode || error?.status) {
+      throw error;
+    }
+    
+    // Network error or other exception
+    const networkError = {
       success: false,
       message: error?.message || "Network Error",
-      error,
+      error: error,
     };
+    throw networkError;
   }
 }
 
@@ -229,14 +265,14 @@ export const apiClient = {
   },
 
   delete<T>(
-  endpoint: string,
-  data?: unknown, // Add this parameter
-  options: Omit<RequestOptions, "method"> = {}
-): Promise<ApiResponse<T>> {
-  return apiRequest<T>(endpoint, { 
-    ...options, 
-    method: "DELETE", 
-    body: data // Add the data as body
-  });
-},
+    endpoint: string,
+    data?: unknown,
+    options: Omit<RequestOptions, "method"> = {}
+  ): Promise<ApiResponse<T>> {
+    return apiRequest<T>(endpoint, { 
+      ...options, 
+      method: "DELETE", 
+      body: data
+    });
+  },
 };

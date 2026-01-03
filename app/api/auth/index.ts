@@ -8,17 +8,23 @@ import {
 } from "./types";
 
 export const authApi = {
-  // Add async/await to ensure the request happens
   login: async (payload: LoginRequest) => {
-    console.log('Auth API: Sending login request with payload:', payload);
-    const response = await apiClient.post<LoginSuccessResponse>(`/auth/login`, payload);
-    console.log('Auth API: Received response:', response);
-    return response;
+    try {
+      const response = await apiClient.post<LoginSuccessResponse>(`/auth/login`, payload);
+      return response;
+    } catch (error: any) {
+      // The error from apiClient should have the structure: { message, error, statusCode }
+      // Re-throw it so it can be caught in the Login component
+      throw error;
+    }
   },
 
   refreshToken: async (payload: RefreshTokenRequest) => {
-    console.log('Auth API: Sending refresh token request');
-    const response = await apiClient.post<RefreshTokenResponse>(`/auth/refresh`, payload);
-    return response;
+    try {
+      const response = await apiClient.post<RefreshTokenResponse>(`/auth/refresh`, payload);
+      return response;
+    } catch (error: any) {
+      throw error;
+    }
   },
 };

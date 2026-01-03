@@ -3,6 +3,9 @@ import Image from "next/image";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import NavLink from "./NavLink";
+import ConfirmationModal from "../shared/ConfirmationModal";
+import Cookies from "js-cookie"; 
+import { useRouter } from "next/navigation";
 
 interface SidebarProps {
   onClose?: () => void;
@@ -18,6 +21,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   onMinimize,
 }) => {
   const [minimizedState, setMinimized] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState<boolean>(false);
 
   const minimized =
     typeof minimizedProp === "boolean" ? minimizedProp : minimizedState;
@@ -46,14 +50,26 @@ const Sidebar: React.FC<SidebarProps> = ({
     setMinimized((s) => !s);
   };
 
+  const router = useRouter();
+
+  const confirmLogout = () => {
+    console.log("User logged out!");
+    Cookies.remove('accessToken')
+    setIsLogoutModalOpen(false);
+    // Redirect to login page
+    router.push("/login");
+  };
+
   return (
+    <>
     <div
       className={
         (minimized && !isMobile ? "w-[72px] p-3" : "w-[260px] p-5") +
-        " bg-white xl:bg-[#EEEEEE66] border-r border-[#11182714] h-screen overflow-auto transition-all duration-200 hide-scrollbar"
+        " bg-white xl:bg-[#EEEEEE66] border-r border-[#11182714] h-screen overflow-auto transition-all duration-200 hide-scrollbar flex flex-col"
       }
     >
-      <div className="flex flex-col gap-7 h-full w-full">
+      {/* Main content container - grows to take available space */}
+      <div className="flex-1 flex flex-col gap-7">
         {/* Header */}
         <div className="flex items-center justify-between w-full">
           <Link href="/">
@@ -88,15 +104,24 @@ const Sidebar: React.FC<SidebarProps> = ({
           </button>
         </div>
 
-        {/* Navigation (single container) */}
-        <nav className="flex flex-col space-y-1 pt-6">
+        {/* Navigation (takes available space) */}
+        <nav className="flex-1 flex flex-col space-y-1 pt-6">
           <NavLink href="/user-management" minimized={minimized}>
-             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M13.3327 17.5V15.8333C13.3327 14.9493 12.9815 14.1014 12.3564 13.4763C11.7313 12.8512 10.8834 12.5 9.99935 12.5H4.99935C4.11529 12.5 3.26745 12.8512 2.64233 13.4763C2.01721 14.1014 1.66602 14.9493 1.66602 15.8333V17.5M18.3327 17.4999V15.8332C18.3321 15.0947 18.0863 14.3772 17.6338 13.7935C17.1813 13.2098 16.5478 12.7929 15.8327 12.6082M13.3327 2.60824C14.0497 2.79182 14.6852 3.20882 15.139 3.79349C15.5929 4.37817 15.8392 5.09726 15.8392 5.8374C15.8392 6.57754 15.5929 7.29664 15.139 7.88131C14.6852 8.46598 14.0497 8.88298 13.3327 9.06657M10.8327 5.83333C10.8327 7.67428 9.3403 9.16667 7.49935 9.16667C5.6584 9.16667 4.16602 7.67428 4.16602 5.83333C4.16602 3.99238 5.6584 2.5 7.49935 2.5C9.3403 2.5 10.8327 3.99238 10.8327 5.83333Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-            <span className={minimized ? "hidden" : ""}>
-              User Management
-            </span>
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 20 20"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M13.3327 17.5V15.8333C13.3327 14.9493 12.9815 14.1014 12.3564 13.4763C11.7313 12.8512 10.8834 12.5 9.99935 12.5H4.99935C4.11529 12.5 3.26745 12.8512 2.64233 13.4763C2.01721 14.1014 1.66602 14.9493 1.66602 15.8333V17.5M18.3327 17.4999V15.8332C18.3321 15.0947 18.0863 14.3772 17.6338 13.7935C17.1813 13.2098 16.5478 12.7929 15.8327 12.6082M13.3327 2.60824C14.0497 2.79182 14.6852 3.20882 15.139 3.79349C15.5929 4.37817 15.8392 5.09726 15.8392 5.8374C15.8392 6.57754 15.5929 7.29664 15.139 7.88131C14.6852 8.46598 14.0497 8.88298 13.3327 9.06657M10.8327 5.83333C10.8327 7.67428 9.3403 9.16667 7.49935 9.16667C5.6584 9.16667 4.16602 7.67428 4.16602 5.83333C4.16602 3.99238 5.6584 2.5 7.49935 2.5C9.3403 2.5 10.8327 3.99238 10.8327 5.83333Z"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <span className={minimized ? "hidden" : ""}>User Management</span>
           </NavLink>
           <NavLink href="/locations" minimized={minimized}>
             <svg
@@ -134,8 +159,6 @@ const Sidebar: React.FC<SidebarProps> = ({
             <span className={minimized ? "hidden" : ""}>Posters</span>
           </NavLink>
 
-
-
           <NavLink href="/services" minimized={minimized}>
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -157,12 +180,69 @@ const Sidebar: React.FC<SidebarProps> = ({
           </NavLink>
 
           <NavLink href="/contact" minimized={minimized}>
-           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="lucide lucide-user-icon lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="lucide lucide-user-icon lucide-user"
+            >
+              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
             <span className={minimized ? "hidden" : ""}>Contact Us</span>
           </NavLink>
         </nav>
       </div>
+
+      {/* Logout button - fixed at the bottom */}
+      <div className="mt-auto pt-6">
+        <button
+          onClick={() => setIsLogoutModalOpen(true)}
+          className={
+            "text-[14px] w-full py-2 px-3 rounded-full flex items-center gap-2 text-[#111827] hover:text-[#FFFFFF] hover:bg-[#11224E] bg-transparent transition " +
+            (minimized ? "justify-center px-1" : "") +
+            (isLogoutModalOpen ? " bg-[#11224E]! text-[#FFFFFF]!" : "")
+          }
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 20 20"
+            fill="none"
+          >
+            <path
+              d="M7.5 17.5H4.16667C3.72464 17.5 3.30072 17.3244 2.98816 17.0118C2.67559 16.6993 2.5 16.2754 2.5 15.8333V4.16667C2.5 3.72464 2.67559 3.30072 2.98816 2.98816C3.30072 2.67559 3.72464 2.5 4.16667 2.5H7.5M13.3333 14.1667L17.5 10M17.5 10L13.3333 5.83333M17.5 10H7.5"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <span className={minimized ? "hidden" : ""}>Logout</span>
+        </button>
+      </div>
+
+      
     </div>
+    {isLogoutModalOpen && (
+        <ConfirmationModal
+          isOpen={isLogoutModalOpen}
+          onClose={() => setIsLogoutModalOpen(false)}
+          onConfirm={confirmLogout}
+          title="Are you sure you want to logout?"
+          message="You'll be signed out of your account and need to log in again to continue."
+          confirmText="Logout"
+          cancelText="Go back"
+        />
+      )}
+    </>
   );
 };
 

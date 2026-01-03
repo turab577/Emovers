@@ -6,6 +6,7 @@ import Input from "../../ui/Input";
 import PrimaryBtn from "@/app/ui/buttons/PrimaryBtn";
 import { useRouter } from "next/navigation";
 import { authApi } from "@/app/api/auth";
+import Cookies from "js-cookie";
 import toast from "react-hot-toast";
 
 const Login: React.FC = () => {
@@ -24,58 +25,75 @@ const Login: React.FC = () => {
   };
 
   const handleLogin = async () => {
+    // Validate inputs
+    if (!formData.email || !formData.password) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+
     setLoading(true);
-    console.log('Login button clicked with data:', formData);
+    console.log('=== LOGIN START ===');
+    console.log('Form data:', formData);
 
     try {
-      // Add a timeout to prevent hanging
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Request timeout')), 10000)
-      );
-
       console.log('Calling authApi.login...');
       
-      // Make the API call with timeout
-      const response = await Promise.race([
-        authApi.login({
-          email: formData.email,
-          password: formData.password,
-        }),
-        timeoutPromise
-      ]);
-      
-      console.log('API Response received:', response);
-
-      // For now, just check if we got a response
-      if (response) {
-        console.log('API call successful, response:', response);
-        toast.success('API hit successfully! Check console for response.');
-        
-        // TODO: Handle the actual response data once API works
-        // For now, just redirect to test
-        router.push("/");
-      }
-      
-    } catch (error: any) {
-      console.error('Login error details:', {
-        error,
-        message: error?.message,
-        stack: error?.stack,
-        type: typeof error
+      const response: any = await authApi.login({
+        email: formData.email,
+        password: formData.password,
       });
       
-      // More detailed error logging
-      if (error.name === 'TypeError' && error.message.includes('fetch')) {
-        console.error('Network error - Check CORS or API endpoint URL');
-        toast.error('Network error - Check API connection');
-      } else if (error.message === 'Request timeout') {
-        console.error('Request timed out - API not responding');
-        toast.error('Request timed out - API might be down');
+      console.log('=== RESPONSE RECEIVED ===');
+      console.log('Full response:', response);
+
+      // FIXED: Check for both success formats
+      // Your API returns: { status: "success", message, accessToken, refreshToken, user }
+      const isSuccess = response?.success === true || response?.status === "success";
+
+      if (isSuccess) {
+        // Access token directly from response (not in data field)
+        const token = response?.accessToken || response?.data?.accessToken;
+        
+        if (token) {
+          // Store token in cookie
+          Cookies.set('accessToken', token, { 
+            expires: 7,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict'
+          });
+          
+          console.log('Token stored in cookie');
+          toast.success(response.message || "Login successful");
+          
+          // Small delay to ensure cookie is set
+          setTimeout(() => {
+            router.push("/");
+            router.refresh();
+          }, 100);
+        } else {
+          console.error('No token in response');
+          toast.error("Login failed - no token received");
+          setLoading(false);
+        }
       } else {
-        console.error('Other error:', error);
-        toast.error(error?.message || "Something went wrong");
+        console.log('=== LOGIN FAILED ===');
+        toast.error(response?.message || "Login failed");
+        setLoading(false);
       }
-    } finally {
+       
+    } catch (error: any) {
+      console.log('=== ERROR CAUGHT ===');
+      console.log('Error:', error);
+      
+      // Your API error format: { message, error, statusCode }
+      if (error?.message) {
+        toast.error(error.message);
+      } else if (error?.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else {
+        toast.error("Something went wrong. Please try again.");
+      }
+      
       setLoading(false);
     }
   };
