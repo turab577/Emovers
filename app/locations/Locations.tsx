@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import AdminTable from './LocationsTable'
+import LocationsTable from './LocationsTable'
 import PrimaryBtn from '../ui/buttons/PrimaryBtn'
 import { motion , AnimatePresence } from 'framer-motion'
 import AddLocationDrawer from './AddLocationDrawer'
@@ -22,7 +22,7 @@ const handleOpenLocation = ()=>{
       <PrimaryBtn onClick={handleOpenLocation} label='Add Location'/>
       </div>
       </div>
-      <AdminTable setIsDrawerOpen={()=>{}}/>
+      <LocationsTable setIsDrawerOpen={()=>{}}/>
 
          <AnimatePresence>
         {openAddLocation && (

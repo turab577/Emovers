@@ -7,6 +7,7 @@ interface FilterDropdownProps {
   options: string[];
   value: string | null;
   onChange: (value: string) => void;
+  left?:string
 }
 
 const FilterDropdown: React.FC<FilterDropdownProps> = ({
@@ -14,6 +15,7 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({
   options,
   value,
   onChange,
+  left,
 }) => {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -48,8 +50,8 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-2 w-fit rounded-xl bg-[#FFFFFF99] shadow-2xl z-50">
-          <ul className="max-h-56 overflow-y-auto">
+        <div className={`absolute ${left || "left-0"} top-full mt-2 w-fit rounded-xl bg-[#FFFFFF99] shadow-2xl z-50`}>
+            <ul className="max-h-56 overflow-y-auto">
             {options.map((opt) => (
               <li
                 key={opt}

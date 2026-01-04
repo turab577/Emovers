@@ -9,45 +9,55 @@ export interface BottomAction {
   onClick: (selectedRows: Record<string, unknown>[]) => void;
   className?: string;
 }
+
 interface TableData {
-  [key: string]: string | number; // Allow both string and number values
+  [key: string]: string | number;
 }
 
 export type Column = {
   key: string;
   label: string;
-  type?: "text" | "image" | "status" | "link";
+  type?: "text" | "image" | "status" | "link" | "custom";
   linkUrlKey?: string;
   imagePosition?: "left" | "right";
-  imageUrlKey?:string
-  onLinkClick?:()=>void
-  
+  imageUrlKey?: string;
+  onLinkClick?: () => void;
+  render?: (row: any) => React.ReactNode;
 };
 
 interface SharedTableProps {
   columns: Column[];
   data: Record<string, unknown>[];
-  // title?: string;
-  isBorder?:boolean;
+  isBorder?: boolean;
   filters?: { key: string; label: string; options: string[] }[];
   searchable?: boolean;
   filterable?: boolean;
-  title?: string | React.ReactNode; 
-
+  title?: string | React.ReactNode;
   selectable?: boolean;
   actions?: (row: Record<string, unknown>) => React.ReactNode;
   onSelect?: (selectedRows: Record<string, unknown>[]) => void;
   bottomActions?: BottomAction[] | false;
   showSelectionCount?: boolean;
-  actionsType?: "dropdown" | "inline" | "buttons";
+  actionsType?: "dropdown" | "inline" | "buttons" | "custom";
   hidePagination?: boolean;
+  showResetButton?: boolean;
+  onFilterChange?: any;
+  onResetFilters?: any;
+  onSearch?: (searchTerm: string) => void;
+  onPageChange?: (page: number) => void;
+  left?:string
+  pagination?: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
 }
 
 // Custom Checkbox Component
 const CustomCheckbox: React.FC<{
   checked: boolean;
   onChange: (checked: boolean) => void;
-  
 }> = ({ checked, onChange }) => {
   return (
     <div
@@ -63,7 +73,6 @@ const CustomCheckbox: React.FC<{
       >
         {checked && (
           <div className="relative w-full h-full">
-            {/* Large tick */}
             <svg
               className="absolute top-0.5"
               width="12"
@@ -79,7 +88,6 @@ const CustomCheckbox: React.FC<{
                 strokeLinejoin="round"
               />
             </svg>
-            {/* Small tick */}
             <svg
               className="absolute top-[7px] left-1"
               width="8"
@@ -126,8 +134,14 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
         return "text-[#11224E]";
       case "opened":
         return "text-[#0CD767]";
+      case "active":
+        return "text-[#0CD767]";
+      case "inactive":
+        return "text-[#EA3232]";
+      case "pending_verification":
+        return "text-[#E28413]";
       default:
-        return "text-[#11224E] ";
+        return "text-[#11224E]";
     }
   };
 
@@ -141,7 +155,6 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
 };
 
 // Image Cell Component
-// Image Cell Component
 const ImageCell: React.FC<{
   image: string;
   text: string;
@@ -154,15 +167,16 @@ const ImageCell: React.FC<{
       }`}
     >
       {imagePosition === "left" && (
-        <img src={image} alt={text} className="w-7 rounded-full h-7  " />
+        <img src={image} alt={text} className="w-7 rounded-full h-7" />
       )}
       <span>{text}</span>
       {imagePosition === "right" && (
-        <img src={image} alt={text} className="w-4 h-4  " />
+        <img src={image} alt={text} className="w-4 h-4" />
       )}
     </div>
   );
 };
+
 const SharedTable: React.FC<SharedTableProps> = ({
   columns,
   data,
@@ -172,12 +186,19 @@ const SharedTable: React.FC<SharedTableProps> = ({
   filters = [],
   searchable = true,
   filterable = true,
+  showResetButton = true,
+  onResetFilters,
+  onFilterChange,
+  onSearch,
+  onPageChange,
+  left,
+  pagination,
   selectable = true,
   actions,
   onSelect,
   bottomActions,
   showSelectionCount = true,
-  hidePagination = false, // Add this with default value
+  hidePagination = false,
 }) => {
   const [selectedRows, setSelectedRows] = useState<any[]>([]);
   const [search, setSearch] = useState("");
@@ -185,11 +206,29 @@ const SharedTable: React.FC<SharedTableProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 10;
 
-  // handle selection
+  // Determine if using API-based features
+  const isUsingApiPagination = !!pagination;
+  const isUsingApiFiltering = !!onFilterChange;
+  const isUsingApiSearch = !!onSearch;
+
+  // Handle selection
   const handleSelectAll = (checked: boolean) => {
-    const newSelection = checked ? paginatedData : [];
+    const dataToSelect = isUsingApiPagination ? data : paginatedData;
+    const newSelection = checked ? dataToSelect : [];
     setSelectedRows(newSelection);
     onSelect?.(newSelection);
+  };
+
+  const handleFilterChange = (key: string, value: string) => {
+    if (isUsingApiFiltering) {
+      onFilterChange?.(key, value);
+    } else {
+      setFilterValues((prev) => ({
+        ...prev,
+        [key]: value === "All" ? "" : value,
+      }));
+      setCurrentPage(1);
+    }
   };
 
   const handleSelectRow = (row: any, checked: boolean) => {
@@ -200,26 +239,72 @@ const SharedTable: React.FC<SharedTableProps> = ({
     onSelect?.(newSelection);
   };
 
-  // filter & search logic
-  const filteredData = data
-    .filter((row) =>
-      Object.keys(filterValues).every(
-        (key) => !filterValues[key] || row[key] === filterValues[key]
-      )
-    )
-    .filter((row) =>
-      Object.values(row).join(" ").toLowerCase().includes(search.toLowerCase())
-    );
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    if (isUsingApiSearch) {
+      onSearch?.(value);
+    } else {
+      setCurrentPage(1);
+    }
+  };
 
-  // pagination logic
-  const totalPages = Math.ceil(filteredData.length / rowsPerPage);
-  const paginatedData = filteredData.slice(
-    (currentPage - 1) * rowsPerPage,
-    currentPage * rowsPerPage
-  );
+  // Frontend filtering and search (only used when not using API)
+  const filteredData = isUsingApiFiltering || isUsingApiSearch
+    ? data
+    : data
+        .filter((row) =>
+          Object.keys(filterValues).every(
+            (key) => !filterValues[key] || row[key] === filterValues[key]
+          )
+        )
+        .filter((row) =>
+          Object.values(row)
+            .join(" ")
+            .toLowerCase()
+            .includes(search.toLowerCase())
+        );
+
+  // Frontend pagination (only used when not using API pagination)
+  const totalPages = isUsingApiPagination
+    ? pagination.totalPages
+    : Math.ceil(filteredData.length / rowsPerPage);
+
+  const paginatedData = isUsingApiPagination
+    ? data
+    : filteredData.slice(
+        (currentPage - 1) * rowsPerPage,
+        currentPage * rowsPerPage
+      );
+
+  const handleResetFilters = () => {
+    if (!isUsingApiFiltering) {
+      const resetFilterValues: Record<string, string> = {};
+      filters.forEach((filter) => {
+        resetFilterValues[filter.key] = "";
+      });
+      setFilterValues(resetFilterValues);
+    }
+
+    setSearch("");
+    setCurrentPage(1);
+    onResetFilters?.();
+  };
+
+  const handlePaginationChange = (page: number) => {
+    if (isUsingApiPagination) {
+      onPageChange?.(page);
+    } else {
+      setCurrentPage(page);
+    }
+  };
 
   const renderCell = (row: any, col: Column) => {
     const value = row[col.key];
+
+    // Handle custom render function
+    if (col.type === "custom" && col.render) {
+      return col.render(row);
+    }
 
     switch (col.type) {
       case "status":
@@ -229,33 +314,38 @@ const SharedTable: React.FC<SharedTableProps> = ({
           <ImageCell
             image={row[`${col.key}_image`]}
             text={value}
-            imagePosition={col.imagePosition} // Pass the image position
+            imagePosition={col.imagePosition}
           />
         );
       case "link":
         return (
-    <div
-      className="cursor-pointer underline flex items-center gap-2"
-      onClick={() => col.onLinkClick?.()}  // Add this onClick handler
-    >
-      {row[`${col.key}_image`] && (
-        <img
-          src={row[`${col.key}_image`]}
-          alt={value}
-          className="w-7 h-7 rounded-full "
-        />
-      )}
-      {value}
-    </div>
-  );
-
+          <div
+            className="cursor-pointer underline flex items-center gap-2"
+            onClick={() => col.onLinkClick?.()}
+          >
+            {row[`${col.key}_image`] && (
+              <img
+                src={row[`${col.key}_image`]}
+                alt={value}
+                className="w-7 h-7 rounded-full"
+              />
+            )}
+            {value}
+          </div>
+        );
       default:
         return value;
     }
   };
 
+  const displayPage = isUsingApiPagination ? pagination.page : currentPage;
+
   return (
-    <div className={`bg-white  ${isBorder ? "border border-[#ECEDEE]" : ""}  rounded-xl p-4 relative`}>
+    <div
+      className={`bg-white ${
+        isBorder ? "border border-[#ECEDEE]" : ""
+      } rounded-xl p-4 relative`}
+    >
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div>
           <h2 className="body-1 font-medium text-[#111827]">{title}</h2>
@@ -267,33 +357,39 @@ const SharedTable: React.FC<SharedTableProps> = ({
               placeholder="Search..."
               className="px-4 py-2 border border-gray-300 rounded-lg w-64 focus:ring-2 focus:ring-orange-500 outline-none"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
             />
           )}
 
           {filterable && (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {filters.map((filter) => (
                 <FilterDropdown
                   key={filter.key}
                   label={filter.label}
+                  left={left}
                   options={filter.options}
                   value={filterValues[filter.key] || ""}
-                  onChange={(value) =>
-                    setFilterValues((prev) => ({
-                      ...prev,
-                      [filter.key]: value,
-                    }))
-                  }
+                  onChange={(value) => handleFilterChange(filter.key, value)}
                 />
               ))}
+
+              {showResetButton && (
+                <button
+                  onClick={handleResetFilters}
+                  className="flex items-center ml-3 heading-6 font-normal text-[#F87B1B] underline underline-offset-4 transition-colors cursor-pointer"
+                  title="Reset all filters"
+                >
+                  Reset filters
+                </button>
+              )}
             </div>
           )}
         </div>
       </div>
 
       <div className="overflow-x-auto hide-scrollbar">
-        <table className="min-w-full border-collapse ">
+        <table className="min-w-full border-collapse">
           <thead>
             <tr className="bg-[#F2F2F2] rounded-lg text-left text-[12px] text-[#111827] uppercase">
               {selectable && (
@@ -332,7 +428,7 @@ const SharedTable: React.FC<SharedTableProps> = ({
                 )}
 
                 {columns.map((col) => (
-                  <td key={col.key} className="p-4">
+                  <td key={col.key} className="p-1">
                     {renderCell(row, col)}
                   </td>
                 ))}
@@ -354,12 +450,12 @@ const SharedTable: React.FC<SharedTableProps> = ({
 
       {!hidePagination && (
         <Pagination
-          currentPage={currentPage}
+          currentPage={displayPage}
           totalPages={totalPages}
-          onPageChange={setCurrentPage}
+          onPageChange={handlePaginationChange}
         />
       )}
-      {/* Bottom Action Bar */}
+
       {selectedRows.length > 0 && bottomActions !== false && (
         <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-[#11224E] text-white rounded-sm p-3 flex items-center gap-3 z-50">
           {showSelectionCount && (

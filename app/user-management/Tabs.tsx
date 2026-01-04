@@ -5,6 +5,7 @@ import Image from "next/image";
 import { motion , AnimatePresence } from "framer-motion";
 import PrimaryBtn from "../ui/buttons/PrimaryBtn";
 import EditDrawer from "./admin/EditDrawer";
+import AddAdminDrawer from "./admin/AddAdmin";
 
 
 
@@ -32,10 +33,15 @@ const Tabs: React.FC<TabsProps> = ({
 }) => {
 
   const [ isEditDrawerOpen , setIsEditDrawerOpen ] = useState(false);
+  const [isAddDrawerOpen , setIsAddDrawerOpen] = useState(false)
 
 
   const openDetail = ()=> {
     setIsEditDrawerOpen(true)
+  }
+
+  const openAddAdmin = ()=> {
+    setIsAddDrawerOpen(true)
   }
 
 
@@ -93,7 +99,7 @@ const Tabs: React.FC<TabsProps> = ({
       <div className={activeTab === 1 ? "block" : "hidden"}>
         <PrimaryBtn 
           label="Add Admin" 
-          onClick={openDetail} 
+          onClick={openAddAdmin} 
         />
       </div>
 
@@ -118,6 +124,33 @@ const Tabs: React.FC<TabsProps> = ({
               transition={{ type: "spring", stiffness: 100, damping: 20 }}
             >
              <EditDrawer onClose={()=>{setIsEditDrawerOpen(false)}} onSendEmail={()=>{setIsEditDrawerOpen(false)}} />
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+
+      <AnimatePresence>
+        {isAddDrawerOpen && (
+          <>
+            {/* Overlay */}
+            <motion.div
+              className="fixed inset-0 bg-black/40 h-[100vh] z-50"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsAddDrawerOpen(false)} // close on overlay click
+            />
+
+            {/* Drawer */}
+            <motion.div
+              className="fixed top-0 right-0  w-full h-[100vh] overflow-auto hide-scrollbar sm:w-[580px] bg-white z-50 rounded-l-lg p-5"
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", stiffness: 100, damping: 20 }}
+            >
+             <AddAdminDrawer onClose={()=>{setIsAddDrawerOpen(false)}}/>
             </motion.div>
           </>
         )}

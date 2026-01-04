@@ -3,57 +3,113 @@ import LightBtn from '@/app/ui/buttons/LightButton'
 import PrimaryBtn from '@/app/ui/buttons/PrimaryBtn'
 import Input from '../ui/Input'
 import Image from 'next/image'
-import { Camera, Upload, Edit2, X, Image as ImageIcon } from 'lucide-react'
+import { Camera, Upload, Edit2, X, Image as ImageIcon, Save } from 'lucide-react'
+import toast from 'react-hot-toast'
+import { locationsAPI } from '@/app/api/locations'
 
-interface EmailDrawerProps {
-  onClose?: () => void
-  onSendEmail?: (data: { email: string; message: string }) => void
+interface EditDrawerProps {
+  location: any
+  locationId: number
+  onClose: () => void
+  onSuccess: () => void
 }
 
-export default function EditDrawer({ onClose, onSendEmail }: EmailDrawerProps) {
-  const [email, setEmail] = useState('')
-  const [message, setMessage] = useState('')
+export default function EditDrawer({ location, locationId, onClose, onSuccess }: EditDrawerProps) {
   const [editForm, setEditForm] = useState(false)
   const [imageFile, setImageFile] = useState<File | null>(null)
-  const [imageUrl, setImageUrl] = useState<string | null>(null)
+  const [imageUrl, setImageUrl] = useState<string | null>(location?.imageUrl || null)
   const [imageName, setImageName] = useState<string>('')
+  const [title, setTitle] = useState(location?.title || '')
+  const [description, setDescription] = useState(location?.description || '')
+  const [loading, setLoading] = useState(false)
+  
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleSend = () => {
-    if (!email || !message) {
-      console.warn('Both fields are required')
-      return
+  useEffect(() => {
+    if (location) {
+      setTitle(location.title || '')
+      setDescription(location.description || '')
+      setImageUrl(location.imageUrl || null)
     }
-    onSendEmail?.({ email, message })
-  }
+  }, [location])
 
   const handleEdit = () => {
-    setEditForm(prev => !prev)
+    setEditForm(true)
   }
   
-  const handleSave = () => {
+  const handleSave = async () => {
+    try {
+      setLoading(true)
+      
+      // Create FormData for multipart request
+      const formData = new FormData()
+      formData.append('title', title)
+      formData.append('description', description)
+      
+      // Only append image if a new one is selected
+      if (imageFile) {
+        formData.append('image', imageFile)
+      }
+      
+      // Call the update API
+      const response = await locationsAPI.updateLocations(locationId, formData)
+      
+      if (response && response.success) {
+        toast.success('Location updated successfully')
+        setEditForm(false)
+        onSuccess() // Refresh the table
+      } else {
+        toast.error(response?.message || 'Failed to update location')
+      }
+    } catch (error: any) {
+      console.error('Error updating location:', error)
+      toast.error(error?.message || 'Failed to update location')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCancel = () => {
+    if (editForm) {
+      // Reset to original values
+      setTitle(location?.title || '')
+      setDescription(location?.description || '')
+      setImageUrl(location?.imageUrl || null)
+      setImageFile(null)
+      setImageName('')
+      
+      // Clear file input if exists
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
     setEditForm(false)
+    if (!editForm) {
+      onClose()
+    }
   }
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
       // Validate file type
-      if (!file.type.startsWith('image/')) {
-        console.warn('Please upload an image file')
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif']
+      if (!allowedTypes.includes(file.type)) {
+        toast.error('Please upload a valid image file (JPG, PNG, WebP, GIF)')
         return
       }
 
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        console.warn('Image size should be less than 5MB')
+      // Validate file size (max 1MB)
+      const maxSize = 1 * 1024 * 1024 // 1MB in bytes
+      if (file.size > maxSize) {
+        toast.error('Image size should be less than 1MB')
         return
       }
 
       setImageName(file.name)
       setImageFile(file)
       
-      // Create blob URL for preview - FIXED
+      // Create blob URL for preview
       const reader = new FileReader()
       reader.onload = (event) => {
         if (event.target?.result) {
@@ -71,18 +127,16 @@ export default function EditDrawer({ onClose, onSendEmail }: EmailDrawerProps) {
   }
 
   const removeImage = () => {
-    if (imageUrl) {
-      // Clean up the blob URL if we were using it
-      if (imageUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(imageUrl)
-      }
-      setImageUrl(null)
-      setImageFile(null)
-      setImageName('')
-      // Clear the file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
-      }
+    if (imageUrl && imageUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(imageUrl)
+    }
+    setImageUrl(null)
+    setImageFile(null)
+    setImageName('')
+    
+    // Clear the file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
     }
   }
 
@@ -105,92 +159,83 @@ export default function EditDrawer({ onClose, onSendEmail }: EmailDrawerProps) {
             You can update location from here
           </p>
         </div>
-        <p 
-          onClick={editForm ? handleSave : handleEdit} 
-          className="text-orange-500 cursor-pointer text-sm underline flex items-center gap-1"
-        >
-          {editForm ? (
-            <>
-              <Edit2 size={14} />
-              Save
-            </>
-          ) : (
-            <>
-              <Edit2 size={14} />
-              Edit
-            </>
-          )}
-        </p>
+        {!editForm ? (
+          <p 
+            onClick={handleEdit} 
+            className="text-orange-500 cursor-pointer text-sm underline flex items-center gap-1"
+          >
+            <Edit2 size={14} />
+            Edit
+          </p>
+        ) : (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded-full flex items-center gap-1">
+              <div className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse"></div>
+              Editing
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* Form Inputs - Name and Email First */}
+      {/* Form Inputs */}
       <div className="flex-1 space-y-4">
         <div className='flex flex-col gap-2'>
           <label className="block text-sm font-medium mb-1">Name</label>
           <Input
             title='Name'
             type="text"
-            // value={name}
+            value={title}
             disabled={!editForm}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Enter your name"
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Enter location name"
             className="w-full h-11 px-4 border disabled:cursor-not-allowed rounded-md outline-none"
           />
         </div>
 
         <div className='flex flex-col gap-2'>
-          <label className="block text-sm font-medium mb-1">Discription</label>
+          <label className="block text-sm font-medium mb-1">Description</label>
           <Input
-            title='Discription'
+            title='Description'
             type='text'
-          
+            value={description}
             disabled={!editForm}
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Write your message..."
-            className="w-full px-4 py-3 border disabled:cursor-not-allowed rounded-md outline-none resize-none"
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Enter location description"
+            className="w-full h-11 px-4 border disabled:cursor-not-allowed rounded-md outline-none"
           />
         </div>
 
-        {/* Image Upload Section - Moved to bottom of form inputs */}
+        {/* Image Upload Section */}
         <div className="pt-4">
-          <label className="block text-sm font-medium mb-3">location Image</label>
+          <label className="block text-sm font-medium mb-3">Location Image</label>
           
-          {/* Full Width Image Preview Container */}
+          {/* Image Preview Container */}
           <div className={`w-full ${editForm ? 'border-2 border-dashed border-orange-500' : 'border border-gray-200'} rounded-lg overflow-hidden bg-gray-50 transition-all duration-200 mb-3`}>
             {/* Image Preview Area */}
             <div className="relative w-full aspect-video flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
               {imageUrl ? (
                 <>
                   <div className="relative w-full h-full">
-                    {/* Using regular img tag instead of Next.js Image for blob URLs */}
-                    <Image
+                    <img
                       src={imageUrl}
                       alt="location preview"
-                      height={200}
-                      width={200}
-                      className=" max-h-[300px] !rounded-sm w-full"
+                      className="object-cover w-full h-full max-h-[300px]"
                     />
                   </div>
                   
                   {/* Image Info Overlay */}
-                  <div className="absolute top-0 left-4 right-4 bg-black/70 text-white py-2 px-3 rounded-lg flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {/* <ImageIcon size={16} /> */}
-                      {/* <span className="text-sm truncate">{imageName}</span> */}
-                    </div>
-                    
-                    {/* {editForm && (
+                  {editForm && (
+                    <div className="absolute top-4 right-4">
                       <button
                         onClick={removeImage}
-                        className="text-red-500 cursor-pointer hover:text-red-300 transition-colors"
+                        className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors shadow-lg"
                         title="Remove image"
                         type="button"
                       >
                         <X size={18} />
                       </button>
-                    )} */}
-                  </div>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="flex flex-col items-center justify-center text-gray-400 p-8">
@@ -207,7 +252,7 @@ export default function EditDrawer({ onClose, onSendEmail }: EmailDrawerProps) {
                 type="file"
                 ref={fileInputRef}
                 onChange={handleImageUpload}
-                accept="image/*"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
                 className="hidden"
                 disabled={!editForm}
               />
@@ -226,7 +271,7 @@ export default function EditDrawer({ onClose, onSendEmail }: EmailDrawerProps) {
                     </button>
                     
                     <p className="mt-2 text-xs text-gray-500">
-                      Supports: JPG, PNG, WebP • Max 5MB
+                      Supports: JPG, PNG, WebP, GIF • Max 1MB
                     </p>
                   </div>
                   
@@ -239,7 +284,7 @@ export default function EditDrawer({ onClose, onSendEmail }: EmailDrawerProps) {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sm text-gray-500">
                     <Camera size={16} />
-                    <span>{imageName ? `Current image: ${imageName}` : 'No image selected'}</span>
+                    <span>{imageName || 'No image selected'}</span>
                   </div>
                   <div className="text-xs text-gray-400">
                     Click Edit to change
@@ -261,8 +306,18 @@ export default function EditDrawer({ onClose, onSendEmail }: EmailDrawerProps) {
 
       {/* Actions */}
       <div className="flex gap-3 mt-6">
-        <LightBtn label="Cancel" onClick={onClose} />
-        <PrimaryBtn label="Send Email" onClick={handleSend} />
+        <LightBtn 
+          label={editForm ? "Cancel" : "Close"} 
+          onClick={handleCancel}
+          disabled={loading}
+        />
+        {editForm && (
+          <PrimaryBtn 
+            label={loading ? "Saving..." : "Save Changes"}
+            onClick={handleSave}
+            disabled={loading || !title.trim() || !description.trim()}
+          />
+        )}
       </div>
     </div>
   )

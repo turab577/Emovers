@@ -1,50 +1,100 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import LightBtn from '@/app/ui/buttons/LightButton'
 import PrimaryBtn from '@/app/ui/buttons/PrimaryBtn'
 import Input from '../ui/Input'
 import Image from 'next/image'
 import { Camera, Upload, X } from 'lucide-react'
+import toast from 'react-hot-toast'
+import { locationsAPI } from '@/app/api/locations'
 
-interface EmailDrawerProps {
-  onClose?: () => void
-  onSendEmail?: (data: { email: string; message: string; image?: File }) => void
+interface AddLocationDrawerProps {
+  onClose: () => void
+  onSuccess?: () => void
 }
 
-export default function AddlocationDrawer({ onClose, onSendEmail }: EmailDrawerProps) {
-  const [email, setEmail] = useState('')
-  const [message, setMessage] = useState('')
+export default function AddLocationDrawer({ onClose, onSuccess }: AddLocationDrawerProps) {
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [imageName, setImageName] = useState<string>('')
+  const [loading, setLoading] = useState(false)
+  
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleSend = () => {
-    if (!email || !message) {
-      console.warn('Both fields are required')
-      return
+  const handleSave = async () => {
+    try {
+      // Validate required fields
+      if (!title.trim()) {
+        toast.error('Please enter a title')
+        return
+      }
+      
+      if (!description.trim()) {
+        toast.error('Please enter a description')
+        return
+      }
+
+      setLoading(true)
+      
+      // Create FormData for multipart request
+      const formData = new FormData()
+      formData.append('title', title)
+      formData.append('description', description)
+      
+      // Only append image if selected
+      if (imageFile) {
+        formData.append('image', imageFile)
+      }
+      
+      // Call the create API
+      const response = await locationsAPI.createLocations(formData)
+      
+      if (response && response.success) {
+        toast.success('Location created successfully')
+        
+        // Reset form
+        setTitle('')
+        setDescription('')
+        setImageFile(null)
+        setImageUrl(null)
+        setImageName('')
+        
+        // Clear file input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = ''
+        }
+        
+        // Call success callback
+        onSuccess?.()
+        
+        // Close drawer
+        onClose()
+      } else {
+        toast.error(response?.message || 'Failed to create location')
+      }
+    } catch (error: any) {
+      console.error('Error creating location:', error)
+      toast.error(error?.message || 'Failed to create location')
+    } finally {
+      setLoading(false)
     }
-    
-    // Send data including the image file if it exists
-    const data = { 
-      email, 
-      message, 
-      ...(imageFile && { image: imageFile })
-    }
-    onSendEmail?.(data)
   }
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
       // Validate file type
-      if (!file.type.startsWith('image/')) {
-        console.warn('Please upload an image file')
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif']
+      if (!allowedTypes.includes(file.type)) {
+        toast.error('Please upload a valid image file (JPG, PNG, WebP, GIF)')
         return
       }
 
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        console.warn('Image size should be less than 5MB')
+      // Validate file size (max 1MB)
+      const maxSize = 1 * 1024 * 1024 // 1MB in bytes
+      if (file.size > maxSize) {
+        toast.error('Image size should be less than 1MB')
         return
       }
 
@@ -69,20 +119,35 @@ export default function AddlocationDrawer({ onClose, onSendEmail }: EmailDrawerP
   }
 
   const removeImage = () => {
-    if (imageUrl) {
-      // Clean up the blob URL if we were using it
-      if (imageUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(imageUrl)
-      }
-      setImageUrl(null)
-      setImageFile(null)
-      setImageName('')
-      // Clear the file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
-      }
+    if (imageUrl && imageUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(imageUrl)
+    }
+    setImageUrl(null)
+    setImageFile(null)
+    setImageName('')
+    
+    // Clear the file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
     }
   }
+
+  const handleCancel = () => {
+    // Clean up blob URL if exists
+    if (imageUrl && imageUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(imageUrl)
+    }
+    onClose()
+  }
+
+  // Clean up blob URL on unmount
+  useEffect(() => {
+    return () => {
+      if (imageUrl && imageUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(imageUrl)
+      }
+    }
+  }, [imageUrl])
 
   return (
     <div className="right-0 top-0 h-full w-full flex flex-col">
@@ -101,28 +166,28 @@ export default function AddlocationDrawer({ onClose, onSendEmail }: EmailDrawerP
           <Input
             title='Title'
             type="text"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
             placeholder="Enter location title"
             className="w-full h-11 px-4 border rounded-md outline-none"
           />
         </div>
 
         <div className='flex flex-col gap-2'>
-          <label className="block text-sm font-medium mb-1">Discription</label>
+          <label className="block text-sm font-medium mb-1">Description</label>
           <Input
-            title='Discription'
+            title='Description'
             type='text'
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Write your message..."
-            className="w-full px-4 py-3 border rounded-md outline-none "
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Enter location description"
+            className="w-full h-11 px-4 border rounded-md outline-none"
           />
         </div>
 
         {/* Image Upload Section - Always editable */}
         <div className="pt-4">
-          <label className="block text-sm font-medium mb-3">Lcation Image</label>
+          <label className="block text-sm font-medium mb-3">Location Image</label>
           
           {/* Full Width Image Preview Container with Orange Dashed Border */}
           <div className="w-full border-2 border-dashed border-orange-500 rounded-lg overflow-hidden bg-orange-50 transition-all duration-200 mb-3">
@@ -130,20 +195,18 @@ export default function AddlocationDrawer({ onClose, onSendEmail }: EmailDrawerP
             <div className="relative w-full aspect-video flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
               {imageUrl ? (
                 <>
-                  <div className="relative w-full h-full flex items-center justify-center">
-                    <Image
+                  <div className="relative w-full h-full">
+                    <img
                       src={imageUrl}
                       alt="location preview"
-                      width={500}
-                      height={300}
-                      className="max-h-[300px] max-w-full object-contain p-4"
+                      className="object-cover w-full h-full max-h-[300px]"
                     />
                   </div>
                   
                   {/* Remove Image Button */}
                   <button
                     onClick={removeImage}
-                    className="absolute top-4 right-4 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 transition-colors"
+                    className="absolute top-4 right-4 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 transition-colors shadow-lg"
                     title="Remove image"
                     type="button"
                   >
@@ -165,7 +228,7 @@ export default function AddlocationDrawer({ onClose, onSendEmail }: EmailDrawerP
                 type="file"
                 ref={fileInputRef}
                 onChange={handleImageUpload}
-                accept="image/*"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
                 className="hidden"
               />
               
@@ -181,7 +244,7 @@ export default function AddlocationDrawer({ onClose, onSendEmail }: EmailDrawerP
                   </button>
                   
                   <p className="mt-2 text-xs text-gray-500">
-                    Supports: JPG, PNG, WebP • Max 5MB
+                    Supports: JPG, PNG, WebP, GIF • Max 1MB
                   </p>
                 </div>
                 
@@ -192,16 +255,21 @@ export default function AddlocationDrawer({ onClose, onSendEmail }: EmailDrawerP
               </div>
             </div>
           </div>
-          
-          {/* Editable Indicator */}
-         
         </div>
       </div>
 
       {/* Actions */}
       <div className="flex gap-3 mt-6">
-        <LightBtn label="Cancel" onClick={onClose} />
-        <PrimaryBtn label="Send Email" onClick={handleSend} />
+        <LightBtn 
+          label="Cancel" 
+          onClick={handleCancel}
+          disabled={loading}
+        />
+        <PrimaryBtn 
+          label={loading ? "Creating..." : "Create Location"} 
+          onClick={handleSave}
+          disabled={loading || !title.trim() || !description.trim()}
+        />
       </div>
     </div>
   )
