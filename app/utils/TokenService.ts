@@ -150,7 +150,8 @@ class TokenService {
       console.error('Token refresh failed:', error);
       
       // If refresh fails with 401/403, log user out
-      if (error.response?.status === 401 || error.response?.status === 403) {
+      const status = error?.response?.status || error?.status || error?.statusCode;
+      if (status === 401 || status === 403) {
         this.handleTokenRefreshFailure();
       }
       

@@ -35,6 +35,20 @@ let apiConfig: ApiConfig = {
 
 const DEFAULT_CONFIG = { ...apiConfig };
 
+function isPublicAuthPath(pathname: string): boolean {
+  return pathname.includes('/login') || pathname.includes('/register') || pathname.includes('/forgot-password');
+}
+
+function clearAuthAndRedirectToLogin() {
+  tokenService.clearTokens();
+
+  if (typeof window === 'undefined') return;
+
+  if (!isPublicAuthPath(window.location.pathname)) {
+    window.location.href = '/login';
+  }
+}
+
 async function apiRequest<T>(
   endpoint: string,
   options: RequestOptions
@@ -72,6 +86,18 @@ async function apiRequest<T>(
     if (response.status === 401) {
       console.warn('Received 401 Unauthorized');
 
+      // If refresh endpoint itself is unauthorized, force logout immediately
+      if (endpoint.includes('/auth/refresh')) {
+        clearAuthAndRedirectToLogin();
+        throw {
+          success: false,
+          message: responseData.message || 'Session expired. Please login again.',
+          status: response.status,
+          error: responseData.error || 'Unauthorized',
+          data: undefined,
+        };
+      }
+
       // CRITICAL FIX: For login endpoint, throw the error immediately
       if (endpoint.includes('/auth/login')) {
         const errorResponse = {
@@ -82,18 +108,6 @@ async function apiRequest<T>(
           statusCode: responseData.statusCode || response.status,
         };
         console.log('Throwing login error:', errorResponse);
-        throw errorResponse;
-      }
-
-      // For billing endpoints, don't auto-redirect - let the component handle it
-      if (endpoint.includes('/billing/')) {
-        const errorResponse = {
-          success: false,
-          message: responseData.message || 'Authentication required',
-          status: response.status,
-          error: responseData.error || 'Unauthorized',
-          data: undefined,
-        };
         throw errorResponse;
       }
 
@@ -111,11 +125,33 @@ async function apiRequest<T>(
           const retryResponse = await fetch(url, {
             method: options.method,
             headers: retryHeaders,
-            body: options.body ? JSON.stringify(options.body) : undefined,
+            body: options.body ? (isFormData ? options.body : JSON.stringify(options.body)) : undefined,
             cache: options.cache || "no-store",
           });
 
           const retryResponseData = await retryResponse.json().catch(() => ({}));
+
+          if (retryResponse.status === 401) {
+            clearAuthAndRedirectToLogin();
+            throw {
+              success: false,
+              message: retryResponseData.message || 'Authentication required',
+              status: retryResponse.status,
+              error: retryResponseData.error || 'Unauthorized',
+              data: undefined,
+            };
+          }
+
+          if (!retryResponse.ok) {
+            throw {
+              success: false,
+              message: retryResponseData.message || `Request failed with status ${retryResponse.status}`,
+              status: retryResponse.status,
+              error: retryResponseData.error || 'Request failed',
+              statusCode: retryResponseData.statusCode || retryResponse.status,
+              data: retryResponseData.data,
+            };
+          }
 
           // Check if retry was successful
           const hasStandardWrapper = 'success' in retryResponseData || 'data' in retryResponseData || 'error' in retryResponseData;
@@ -145,12 +181,7 @@ async function apiRequest<T>(
       }
 
       // If refresh failed or wasn't attempted, clear tokens and redirect
-      tokenService.clearTokens();
-
-      // Redirect to login page if not already there
-      if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-        window.location.href = '/login';
-      }
+      clearAuthAndRedirectToLogin();
 
       const errorResponse = {
         success: false,

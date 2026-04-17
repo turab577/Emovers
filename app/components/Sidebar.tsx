@@ -60,6 +60,12 @@ const Sidebar: React.FC<SidebarProps> = ({
     router.push("/login");
   };
 
+    const handleNavigate = ()=>{
+      if (isMobile) {
+        onClose
+      }
+    }
+
   return (
     <>
     <div
@@ -106,7 +112,27 @@ const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Navigation (takes available space) */}
         <nav className="flex-1 flex flex-col space-y-1 pt-6">
-          <NavLink href="/user-management" minimized={minimized}>
+          <NavLink href="/dashboard" minimized={minimized} onNavigate={handleNavigate}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <rect width="7" height="9" x="3" y="3" rx="1" />
+              <rect width="11" height="5" x="10" y="3" rx="1" />
+              <rect width="11" height="9" x="10" y="9" rx="1" />
+              <rect width="7" height="5" x="3" y="13" rx="1" />
+            </svg>
+            <span className={minimized ? "hidden" : ""}>Dashboard</span>
+          </NavLink>
+
+          <NavLink href="/user-management" minimized={minimized} onNavigate={handleNavigate}>
             <svg
               width="20"
               height="20"
