@@ -389,7 +389,7 @@ const SharedTable: React.FC<SharedTableProps> = ({
       </div>
 
       <div className="overflow-x-auto hide-scrollbar">
-        <table className="min-w-full border-collapse" style={{ tableLayout: 'fixed' }}>
+        <table className="min-w-full border-collapse">
           <thead>
             <tr className="bg-[#F2F2F2] rounded-lg text-left text-[12px] text-[#111827] uppercase">
               {selectable && (
@@ -405,10 +405,9 @@ const SharedTable: React.FC<SharedTableProps> = ({
               )}
               {columns.map((col) => (
                 <th 
-                  key={col.key} 
-                  className="p-3 font-semibold whitespace-nowrap"
-                  style={{ minWidth: '120px' }}
-                >
+  key={col.key} 
+  className="p-3 font-semibold whitespace-nowrap"
+>
                   {col.label}
                 </th>
               ))}
@@ -421,40 +420,52 @@ const SharedTable: React.FC<SharedTableProps> = ({
           </thead>
 
           <tbody>
-            {paginatedData.map((row, idx) => (
-              <tr
-                key={idx}
-                className="hover:bg-gray-50 text-[12px] font-normal text-[#414652] border-b border-gray-100"
-              >
-                {selectable && (
-                  <td className="p-4">
-                    <CustomCheckbox
-                      checked={selectedRows.includes(row)}
-                      onChange={(checked) => handleSelectRow(row, checked)}
-                    />
-                  </td>
-                )}
-
-                {columns.map((col) => (
-                  <td 
-                    key={col.key} 
-                    className="p-1 whitespace-nowrap"
-                  >
-                    {renderCell(row, col)}
-                  </td>
-                ))}
-
-                {actions && (
-                  <td className="p-4 relative whitespace-nowrap">
-                    {actionsType === "dropdown" ? (
-                      <ActionDropdown actions={actions} row={row} />
-                    ) : (
-                      actions(row)
-                    )}
-                  </td>
-                )}
+            {paginatedData.length === 0 ? (
+              <tr>
+                <td colSpan={columns.length + (selectable ? 1 : 0) + (actions ? 1 : 0)} className="text-center py-12 text-gray-400">
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <svg width="48" height="48" fill="none" viewBox="0 0 48 48"><rect width="48" height="48" rx="24" fill="#F6F6F6"/><path d="M16 24h16M24 16v16" stroke="#E28413" strokeWidth="2" strokeLinecap="round"/></svg>
+                    <span className="text-base font-medium">No data found</span>
+                    <span className="text-xs text-gray-400">There are no records to display.</span>
+                  </div>
+                </td>
               </tr>
-            ))}
+            ) : (
+              paginatedData.map((row, idx) => (
+                <tr
+                  key={idx}
+                  className="hover:bg-gray-50 text-[12px] font-normal text-[#414652] border-b border-gray-100"
+                >
+                  {selectable && (
+                    <td className="p-4">
+                      <CustomCheckbox
+                        checked={selectedRows.includes(row)}
+                        onChange={(checked) => handleSelectRow(row, checked)}
+                      />
+                    </td>
+                  )}
+
+                  {columns.map((col) => (
+                    <td 
+                      key={col.key} 
+                      className="p-1 whitespace-nowrap"
+                    >
+                      {renderCell(row, col)}
+                    </td>
+                  ))}
+
+                  {actions && (
+                    <td className="p-4 relative whitespace-nowrap">
+                      {actionsType === "dropdown" ? (
+                        <ActionDropdown actions={actions} row={row} />
+                      ) : (
+                        actions(row)
+                      )}
+                    </td>
+                  )}
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
