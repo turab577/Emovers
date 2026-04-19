@@ -78,15 +78,13 @@ const LocationsTable = ({
       
       if (response && response.success && Array.isArray(response.data)) {
         console.log('Locations data array:', response.data);
-        
         // Filter by status if active filter is set
-        let filteredData = response.data;
+        let filteredData: any[] = response.data;
         if (filters.status && filters.status !== "All") {
-          filteredData = response.data.filter((location: any) => 
+          filteredData = filteredData.filter((location: any) => 
             location.status === filters.status
           );
         }
-        
         const transformedData = filteredData.map((location: any) => ({
           id: location.id,
           locationName: location.title,
@@ -417,8 +415,7 @@ const LocationsTable = ({
         icon="/images/bin.svg"
         confirmText={isDeleting ? "Deleting..." : "Delete Location"}
         cancelText="Go back"
-        isLoading={isDeleting}
-        disabled={isDeleting}
+        inputDisabled={isDeleting}
       />
 
       {/* Edit Location Drawer */}

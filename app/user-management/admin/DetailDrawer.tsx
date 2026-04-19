@@ -204,7 +204,6 @@ export default function DetailDrawer({ user, onClose }: DetailDrawerProps) {
         <LightBtn 
           label="Close" 
           onClick={onClose}
-          className="flex-1"
         />
       </div>
     </div>

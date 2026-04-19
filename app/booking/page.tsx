@@ -210,7 +210,7 @@ const BookingPage = () => {
     await bookingAPI.remove(id);
     setDrawerOpen(false);
     fetchBookings();
-  };
+  }; 
 
   return (
     <div className="space-y-8">

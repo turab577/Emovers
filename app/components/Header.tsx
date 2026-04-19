@@ -129,7 +129,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, isMobile }) => {
         } else {
           setProfileImg("/images/profile.svg");
         }
-      } else if (response?.status === "success" && response?.data) {
+      } else if (response?.status === "success" as any && response?.data) {
         // Handle alternative success structure
         const userData = response.data;
         

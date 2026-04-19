@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import PrimaryBtn from '../ui/buttons/PrimaryBtn';
-import { posterApi, Poster } from '../api/posters';
+import { posterApi } from '../api/posters';
+import type { ImageData as Poster } from '../api/posters/types';
 import ConfirmationModal from '../shared/ConfirmationModal';
 import toast from 'react-hot-toast';
 
@@ -88,7 +89,7 @@ export default function Posters() {
     try {
       setLoading(true);
       const data = await posterApi.getPosters();
-      setPosters(data);
+      setPosters(data as Poster[]);
     } catch (err: any) {
       const errorMessage = extractErrorMessage(err);
       showErrorToast(`Failed to load posters: ${errorMessage}`);
@@ -245,7 +246,7 @@ export default function Posters() {
         title={modalConfig.title}
         message={modalConfig.message}
         onConfirm={modalConfig.onConfirm}
-        onCancel={handleModalCancel}
+        onClose={handleModalCancel}
         type={modalConfig.type}
         confirmText={actionInProgress ? 'Processing...' : 'Confirm'}
         cancelText="Cancel"
@@ -353,9 +354,9 @@ export default function Posters() {
                   </span>
                 </div>
                 <div className="text-xs text-gray-500">
-                  <div>Uploaded: {formatDate(poster.createdAt)}</div>
+                  <div>Uploaded: {formatDate(typeof poster.createdAt === 'string' ? poster.createdAt : poster.createdAt.toISOString())}</div>
                   {poster.createdAt !== poster.updatedAt && (
-                    <div className="mt-1">Updated: {formatDate(poster.updatedAt)}</div>
+                    <div className="mt-1">Updated: {formatDate(typeof poster.updatedAt === 'string' ? poster.updatedAt : poster.updatedAt.toISOString())}</div>
                   )}
                 </div>
               </div>

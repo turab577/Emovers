@@ -50,6 +50,12 @@ const Login: React.FC = () => {
       // Your API returns: { status: "success", message, accessToken, refreshToken, user }
       const isSuccess = response?.success === true || response?.status === "success";
 
+      if (response.data.user.role !== "ADMIN"){
+        toast.error("You do not have permission to access this dashboard");
+        setLoading(false);
+        return;
+      }
+
       if (isSuccess) {
         // Access token directly from response (not in data field)
         const token = response?.accessToken || response?.data?.accessToken;

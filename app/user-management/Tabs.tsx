@@ -123,7 +123,7 @@ const Tabs: React.FC<TabsProps> = ({
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 100, damping: 20 }}
             >
-             <EditDrawer onClose={()=>{setIsEditDrawerOpen(false)}} onSendEmail={()=>{setIsEditDrawerOpen(false)}} />
+             <EditDrawer onClose={()=>{setIsEditDrawerOpen(false)}} />
             </motion.div>
           </>
         )}

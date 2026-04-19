@@ -44,7 +44,7 @@ const handleOpenLocation = ()=>{
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 100, damping: 20 }}
             >
-             <AddLocationDrawer onClose={()=>{setOpenAddLocation(false)}} onSendEmail={()=>{setOpenAddLocation(false)}} />
+             <AddLocationDrawer onClose={()=>{setOpenAddLocation(false)}} />
             </motion.div>
           </>
         )}
